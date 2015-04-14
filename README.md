@@ -7,6 +7,7 @@ The sketch operates as a continual pressure reader, based on the "[Rain water ta
 The hardware used for developing this sketch:
  - Mitsumi MAP-1704 6VDC membrane pump
  - Honeywell HSCDANN005PGSA5 5psi temperature compensated SPI output pressure sensor
+ - [SparkFun DeadOn RTC Breakout - DS3234](https://www.sparkfun.com/products/10160)
  - Arduino Uno SMD
  - 2N2222 PNP transistor
  - 1N4001 diode
@@ -18,6 +19,6 @@ The circuit is presented in the "Bubbler Electronics" Fritzing project.
 
 NB: at this time there is no HSC sensor on the Fritzing project simply because the Fritzing component isn't available yet.
 
-NB: these sensors are relatively expensive, costing about as much as the Arduino itself.
+NB: these sensors are relatively expensive, costing about as much as the Arduino Uno itself.
 
 NB: the MAP-1704 is easily capable of producing pressures that will burst the HSCDANN005PGSA5. The sensor's burst pressure is 40PSI, the pump is capable of 60PSI. Please be careful with your expensive sensors: note that this sketch pulses the motor and checks pressure readings after each short pulse, halting the charging process and lighting the warning LED if the pressure becomes too high.
