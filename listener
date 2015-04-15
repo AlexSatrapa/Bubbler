@@ -2,4 +2,21 @@
 
 from xbee import XBee, ZigBee
 import serial
+import argparse
 
+parser = argparse.ArgumentParser(description='Monitor a ZigBee network.')
+parser.add_argument('port', help='The serial port the ZigBee is connected to.')
+parser.add_argument('--speed', help='The bit rate of the serial port.', default=115200)
+args = parser.parse_args()
+
+port_string = args.port
+port_speed = args.speed
+
+serial_port = serial.Serial(port_string, port_speed)
+xbee = ZigBee(serial_port)
+while True:
+	try:
+		print xbee.wait_read_frame()
+	except KeyboardInterrupt:
+		break
+serial_port.close()
