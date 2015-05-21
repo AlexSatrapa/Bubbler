@@ -31,12 +31,28 @@ frame_name = {
 
 def interpretFrame(frame):
 	interpreted_frame = {}
-	hex_items = ['profile', 'cluster', 'source_addr', 'dest_endpoint', 'source_endpoint', 'source_addr_long', 'rf_data']
-	for item in hex_items:
-		interpreted_frame[item] = binascii.hexlify(frame[item])
+	non_hex_items = ['id']
+	for item in frame.keys():
+		if item in non_hex_items:
+			interpreted_frame[item] = frame[item]
+		else:
+			interpreted_frame[item] = binascii.hexlify(frame[item])
 	interpreted_frame['frame_name'] = frame_name[frame['cluster']] if frame_name.has_key(frame['cluster']) else 'unknown frame'
 	if (frame['profile'] == "\xc1\x05" and frame['cluster'] == "\x00\x11"):
 		interpreted_frame['raw_data'] = frame['rf_data']
+	if (frame['cluster'] == "\x00\x95"):
+		raw = frame['rf_data']
+		interpreted_frame['remote_16'] = binascii.hexlify(raw[0:2])
+		interpreted_frame['remote_64'] = binascii.hexlify(raw[2:10])
+		name = b''
+		index = 10
+		while raw[index:index+1] != b'\x00':
+			name += raw[index]
+			index += 1
+		interpreted_frame['device_name'] = name.encode('string-escape')
+		interpreted_frame['parent_16'] = binascii.hexlify(raw[index:index+2])
+		interpreted_frame['device_type'] = binascii.hexlify(raw[index+2])
+		interpreted_frame['source_event'] = binascii.hexlify(raw[index+3])
 	return interpreted_frame
 
 parser = argparse.ArgumentParser(description='Monitor a ZigBee network.')
