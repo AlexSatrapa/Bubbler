@@ -3,6 +3,41 @@
 from xbee import XBee, ZigBee
 import serial
 import argparse
+import json
+import binascii
+
+# XBee/XBee-PRO ZigBee RF Modules User Guide p114
+frame_name = {
+	"\x00\x08": "AT command",
+	"\x00\x09": "AT command - queue paramter value",
+	"\x00\x10": "ZigBee transmit request",
+	"\x00\x11": "explicit addressing ZigBee command frame",
+	"\x00\x13": "device announce",
+	"\x00\x17": "remote command request",
+	"\x00\x21": "create source route",
+	"\x00\x88": "AT command response",
+	"\x00\x8A": "modem status",
+	"\x00\x8B": "ZigBee transmit status",
+	"\x00\x90": "ZigBee receive packet",
+	"\x00\x91": "ZigBee explicit RX indicator",
+	"\x00\x92": "ZigBee IO data sample RX indicator",
+	"\x00\x94": "XBee sensor read indicator",
+	"\x00\x95": "node identification",
+	"\x00\x97": "remote command response",
+	"\x00\xA0": "Over-The-Air firmware update status",
+	"\x00\xA1": "route record indicator",
+	"\x00\xA3": "many-to-one route request indicator",
+	}
+
+def interpretFrame(frame):
+	interpreted_frame = {}
+	hex_items = ['profile', 'cluster', 'source_addr', 'dest_endpoint', 'source_endpoint', 'source_addr_long', 'rf_data']
+	for item in hex_items:
+		interpreted_frame[item] = binascii.hexlify(frame[item])
+	interpreted_frame['frame_name'] = frame_name[frame['cluster']] if frame_name.has_key(frame['cluster']) else 'unknown frame'
+	if (frame['profile'] == "\xc1\x05" and frame['cluster'] == "\x00\x11"):
+		interpreted_frame['raw_data'] = frame['rf_data']
+	return interpreted_frame
 
 parser = argparse.ArgumentParser(description='Monitor a ZigBee network.')
 parser.add_argument('port', help='The serial port the ZigBee is connected to.')
@@ -16,7 +51,10 @@ serial_port = serial.Serial(port_string, port_speed)
 xbee = ZigBee(serial_port)
 while True:
 	try:
-		print xbee.wait_read_frame()
+		escaped_frame = {}
+		frame = xbee.wait_read_frame()
+		interpreted = interpretFrame(frame)
+		print json.dumps(interpreted, encoding="utf8")
 	except KeyboardInterrupt:
 		break
 serial_port.close()
