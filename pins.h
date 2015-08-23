@@ -15,20 +15,11 @@
 // Pin 5 PCINT21/OC0B/T1, PWM
 #define XBEE_ENABLE 5
 // Pin 6 PCINT22/OC0A/AIN0, PWM
-#define READINGLED 6
 // Pin 7 PCINT23/AIN1
 #define PRESSURE 7
 // Pin 8 PCINT0/CLK0/ICP1
 #define RTC_SS_PIN 8
 // Pin 9 PCINT1/OC1A, PWM
-
-// SD Card (SPI) uses pins 10, 11, 12, 13
-// Pin 10 SPI SS, PWM
-// Pin 11 SPI MOSI, PWM
-// Pin 12 SPI MISO
-// Pin 13 SPI SCK, LED
-
-// ANALOGUE I/O
 
 inline void disablePin( int pin ) {
 	pinMode( pin, INPUT );
@@ -42,7 +33,6 @@ inline void setupPins() {
 	pinMode(MOTOR, OUTPUT);
 	pinMode(XBEE_ENABLE, OUTPUT);
 	digitalWrite(XBEE_ENABLE, LOW);
-	pinMode(READINGLED, OUTPUT);
 	pinMode(WARNLED, OUTPUT);
 	digitalWrite(PRESSURE, HIGH);
 	pinMode(PRESSURE, OUTPUT);
