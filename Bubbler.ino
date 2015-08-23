@@ -28,8 +28,10 @@ For details, see the associated Fritzing project, "Bubbler Electronics.fzz".
 */
 
 #include "pins.h"
+#include <SPI.h>
+#include <DSRTC.h>
 #include <HSCDANN005PGSA5.h>
-#include <DS3234.h>
+#include <ds3234.h>
 #include <Sleep.h>
 
 const int MIN_RAW = 1638;
@@ -48,7 +50,7 @@ void wakeXBee() {
 	}
 
 void sleepXBee() {
-	delay(1000);
+	delay(1000); // FIXME - figure out how to tell if the XBee has stopped transmitting
 	digitalWrite(XBEE_ENABLE, LOW);
 	}
 
@@ -80,9 +82,10 @@ inline void getPressureReading() {
 	boolean highpressure = 0;
 	int old_pressure; // pressures are raw readings ("counts") from HSC sensor
 	int new_pressure;
-	const int pump_duration = 100;
+	const int pump_duration = 250;
+	const int pump_delay = 500;
 
-	digitalWrite(READINGLED, HIGH);
+	wakeXBee();
 	pressure_sensor.update();
 	new_pressure = pressure_sensor.rawPressure();
 
@@ -101,17 +104,15 @@ inline void getPressureReading() {
 			digitalWrite(MOTOR, HIGH);
 			delay(pump_duration);
 			digitalWrite(MOTOR, LOW);
-			delay(500); // allow for pump motor inertia, and escape of some bubbles
+			delay(pump_delay); // allow for pump motor inertia, and escape of some bubbles
 			}
 		pressure_sensor.update();
 		new_pressure = pressure_sensor.rawPressure();
 		charging = (abs(new_pressure - old_pressure) > MARGIN);
 		}
 	pressure_sensor.stop();
-	wakeXBee();
 	printReading();
 	sleepXBee();
-	digitalWrite(READINGLED, LOW);
 	}
 
 void INT0_ISR() {
