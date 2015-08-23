@@ -5,54 +5,20 @@ import serial
 import argparse
 import json
 import binascii
+from datetime import datetime
 
-# XBee/XBee-PRO ZigBee RF Modules User Guide p114
-frame_name = {
-	"\x00\x08": "AT command",
-	"\x00\x09": "AT command - queue paramter value",
-	"\x00\x10": "ZigBee transmit request",
-	"\x00\x11": "explicit addressing ZigBee command frame",
-	"\x00\x13": "device announce",
-	"\x00\x17": "remote command request",
-	"\x00\x21": "create source route",
-	"\x00\x88": "AT command response",
-	"\x00\x8A": "modem status",
-	"\x00\x8B": "ZigBee transmit status",
-	"\x00\x90": "ZigBee receive packet",
-	"\x00\x91": "ZigBee explicit RX indicator",
-	"\x00\x92": "ZigBee IO data sample RX indicator",
-	"\x00\x94": "XBee sensor read indicator",
-	"\x00\x95": "node identification",
-	"\x00\x97": "remote command response",
-	"\x00\xA0": "Over-The-Air firmware update status",
-	"\x00\xA1": "route record indicator",
-	"\x00\xA3": "many-to-one route request indicator",
-	}
+# Note: set the coordinator XBee API Output Mode to "explicit", AO=0
 
 def interpretFrame(frame):
 	interpreted_frame = {}
-	non_hex_items = ['id']
+	current_time = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
+	non_hex_items = ['id', 'rf_data', 'node_id']
 	for item in frame.keys():
 		if item in non_hex_items:
 			interpreted_frame[item] = frame[item]
 		else:
 			interpreted_frame[item] = binascii.hexlify(frame[item])
-	interpreted_frame['frame_name'] = frame_name[frame['cluster']] if frame_name.has_key(frame['cluster']) else 'unknown frame'
-	if (frame['profile'] == "\xc1\x05" and frame['cluster'] == "\x00\x11"):
-		interpreted_frame['raw_data'] = frame['rf_data']
-	if (frame['cluster'] == "\x00\x95"):
-		raw = frame['rf_data']
-		interpreted_frame['remote_16'] = binascii.hexlify(raw[0:2])
-		interpreted_frame['remote_64'] = binascii.hexlify(raw[2:10])
-		name = b''
-		index = 10
-		while raw[index:index+1] != b'\x00':
-			name += raw[index]
-			index += 1
-		interpreted_frame['device_name'] = name.encode('string-escape')
-		interpreted_frame['parent_16'] = binascii.hexlify(raw[index:index+2])
-		interpreted_frame['device_type'] = binascii.hexlify(raw[index+2])
-		interpreted_frame['source_event'] = binascii.hexlify(raw[index+3])
+	interpreted_frame['timestamp'] = current_time
 	return interpreted_frame
 
 parser = argparse.ArgumentParser(description='Monitor a ZigBee network.')
