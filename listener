@@ -5,9 +5,13 @@ import serial
 import argparse
 import json
 import binascii
+import re
 from datetime import datetime
 
 # Note: set the coordinator XBee API Output Mode to "explicit", AO=0
+
+strip_leading_nonprintables = re.compile("^[^\w]+")
+strip_trailing_nonprintables = re.compile("[^!\w]+$")
 
 def interpretFrame(frame):
 	interpreted_frame = {}
@@ -36,7 +40,12 @@ while True:
 		escaped_frame = {}
 		frame = xbee.wait_read_frame()
 		interpreted = interpretFrame(frame)
+		if (interpreted.has_key('rf_data')):
+			interpreted['rf_data'] = strip_leading_nonprintables.sub('', interpreted['rf_data'])
+			interpreted['rf_data'] = strip_trailing_nonprintables.sub('', interpreted['rf_data'])
 		print json.dumps(interpreted, encoding="utf8")
 	except KeyboardInterrupt:
 		break
+	except UnicodeDecodeError:
+		print "Could not decode {stuff} as UTF-8.\n".format(stuff=interpreted)
 serial_port.close()
