@@ -28,10 +28,9 @@ For details, see the associated Fritzing project, "Bubbler Electronics.fzz".
 */
 
 #include "pins.h"
-#include <SPI.h>
 #include <DSRTC.h>
 #include <HSCDANN005PGSA5.h>
-#include <ds3234.h>
+#include <DS3234.h>
 #include <Sleep.h>
 
 const int MIN_RAW = 1638;
@@ -43,6 +42,23 @@ volatile bool ALARM = false;
 
 HSCDANN005PGSA5 pressure_sensor(PRESSURE);
 DS3234 rtc(RTC_SS_PIN, DS323X_INTCN || DS323X_EOSC);
+
+inline void disablePin( int pin ) {
+	pinMode( pin, INPUT );
+	digitalWrite( pin, HIGH );
+	}
+
+inline void setupPins() {
+	// Now configure the pins we're actually using
+	pinMode(MOTOR, OUTPUT);
+	pinMode(XBEE_ENABLE, OUTPUT);
+	digitalWrite(XBEE_ENABLE, LOW);
+	pinMode(WARNLED, OUTPUT);
+	digitalWrite(PRESSURE, HIGH);
+	pinMode(PRESSURE, OUTPUT);
+	digitalWrite(RTC_SS_PIN, HIGH);
+	pinMode(RTC_SS_PIN, OUTPUT);
+	}
 
 void wakeXBee() {
 	digitalWrite(XBEE_ENABLE, HIGH);
@@ -120,10 +136,26 @@ void INT0_ISR() {
 	ALARM = true;
 	}
 
+#if defined( __AVR_ATtinyX41__ )
+ISR (PCINT0_vect) {
+	GIMSK &= ~B00010000; // Disable PCI group 0
+	ALARM = true;
+	}
+#endif
+
+void enableInterrupt() {
+#if defined( __AVR_ATtinyX41__ )
+	PCMSK0 |= B00000100; // Enable PCINT2, Arduino pin 8, ATTiny physical pin 11 "A2"
+	GIMSK |= B00010000; // Enable PCI group 0
+#else
+	attachInterrupt(0, INT0_ISR, LOW);
+#endif
+	}
+
 inline void setupRTC() {
 	dsrtc_calendar_t time_buf;
 
-	attachInterrupt(0, INT0_ISR, LOW);
+	enableInterrupt();
 	rtc.writeAlarm(2, alarmModePerMinute, time_buf);
 	rtc.setSQIMode(sqiModeAlarm2);
 	}
@@ -143,10 +175,10 @@ void setup() {
 void loop() {
 	// put your main code here, to run repeatedly:
 	if (ALARM) {
-		getPressureReading();
 		rtc.clearAlarmFlag(3);
+		getPressureReading();
 		ALARM = false;
-		attachInterrupt(0, INT0_ISR, LOW);
+		enableInterrupt();
 	}
 	Serial.flush();
 	powerDown();
