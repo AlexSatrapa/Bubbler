@@ -28,6 +28,7 @@ For details, see the associated Fritzing project, "Bubbler Electronics.fzz".
 */
 
 #include "pins.h"
+#include <SPI.h>
 #include <DSRTC.h>
 #include <HSCDANN005PGSA5.h>
 #include <DS3234.h>
@@ -38,7 +39,8 @@ const int MAX_RAW = 14746;
 const int BUFF_MAX = 80;
 const int MARGIN = (MAX_RAW - MIN_RAW) / 400; // 0.25%
 const int HIGH_CUTOUT = MAX_RAW * 0.9;
-volatile bool ALARM = false;
+const int PERIOD_MINUTES = 6;
+volatile bool alarm = false;
 
 HSCDANN005PGSA5 pressure_sensor(PRESSURE);
 DS3234 rtc(RTC_SS_PIN, DS323X_INTCN || DS323X_EOSC);
@@ -62,11 +64,10 @@ inline void setupPins() {
 
 void wakeXBee() {
 	digitalWrite(XBEE_ENABLE, HIGH);
-	delay(9000);
+	delay(100); // Allow XBee to finish waking up
 	}
 
 void sleepXBee() {
-	delay(1000); // FIXME - figure out how to tell if the XBee has stopped transmitting
 	digitalWrite(XBEE_ENABLE, LOW);
 	}
 
@@ -101,7 +102,6 @@ inline void getPressureReading() {
 	const int pump_duration = 250;
 	const int pump_delay = 500;
 
-	wakeXBee();
 	pressure_sensor.update();
 	new_pressure = pressure_sensor.rawPressure();
 
@@ -127,19 +127,17 @@ inline void getPressureReading() {
 		charging = (abs(new_pressure - old_pressure) > MARGIN);
 		}
 	pressure_sensor.stop();
-	printReading();
-	sleepXBee();
 	}
 
 void INT0_ISR() {
 	detachInterrupt(0);
-	ALARM = true;
+	alarm = true;
 	}
 
 #if defined( __AVR_ATtinyX41__ )
 ISR (PCINT0_vect) {
 	GIMSK &= ~B00010000; // Disable PCI group 0
-	ALARM = true;
+	alarm = true;
 	}
 #endif
 
@@ -155,9 +153,15 @@ void enableInterrupt() {
 inline void setupRTC() {
 	dsrtc_calendar_t time_buf;
 
-	enableInterrupt();
-	rtc.writeAlarm(2, alarmModePerMinute, time_buf);
+	rtc.clearAlarmFlag(3);
+	alarm = false;
+	rtc.read(time_buf);
+	time_buf.Minute += PERIOD_MINUTES;
+	time_buf.Minute %= 60;
+	rtc.writeAlarm(2, alarmModeMinutesMatch, time_buf);
 	rtc.setSQIMode(sqiModeAlarm2);
+
+	enableInterrupt();
 	}
 
 void setup() {
@@ -169,17 +173,21 @@ void setup() {
 	pressure_sensor.update();
 	printDatestamp();
 	Serial.println();
+	wakeXBee();
+	delay(10000); // Wait long enough for XBee to register on network
 	getPressureReading();
+	printReading();
 }
 
 void loop() {
 	// put your main code here, to run repeatedly:
-	if (ALARM) {
-		rtc.clearAlarmFlag(3);
+	if (alarm) {
+		setupRTC();
 		getPressureReading();
-		ALARM = false;
-		enableInterrupt();
+		wakeXBee();
+		printReading();
 	}
 	Serial.flush();
+	sleepXBee();
 	powerDown();
 }

@@ -22,3 +22,9 @@ NB: at this time there is no HSC sensor on the Fritzing project simply because t
 NB: these sensors are relatively expensive, costing about as much as the Arduino Uno itself.
 
 NB: the MAP-1704 is easily capable of producing pressures that will burst the HSCDANN005PGSA5. The sensor's burst pressure is 40PSI, the pump is capable of 60PSI. Please be careful with your expensive sensors. This sketch pulses the motor and checks pressure readings after each short pulse, halting the charging process and lighting the warning LED if the pressure becomes too high.
+
+# Setting up ZigBee radios
+
+Remember to set the SP (Sleep Period) and SN (Number of Sleeps) parameters on the coordinator so that it will wait twice as long as your sensor will be sleeping.
+
+If the sensor is going to sleep for three minutes, make sure (SP * SN * 10ms) > (3*2). This will reduce the amount of time you have to wake the XBee for in order to be able to send messages.
