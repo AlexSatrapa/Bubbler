@@ -68,6 +68,7 @@ void wakeXBee() {
 	}
 
 void sleepXBee() {
+	delay(100); // Allow time for XBee to do housekeeping (even though it's supposed to finish transmitting before going to sleep after we assert SLEEP)
 	digitalWrite(XBEE_ENABLE, LOW);
 	}
 
@@ -83,15 +84,18 @@ inline void printDatestamp() {
 
 inline void printValues() {
 	char buff[BUFF_MAX];
+	tpElements_t rtc_temp;
 	int raw_press = pressure_sensor.rawPressure();
 	int raw_temp = pressure_sensor.rawTemperature();
-	snprintf(buff, BUFF_MAX, ", %d, %d", raw_press, raw_temp);
+	rtc.readTemperature(rtc_temp);
+	snprintf(buff, BUFF_MAX, ", %d, %d, %d\.%d", raw_press, raw_temp, rtc_temp.Temp, rtc_temp.Decimal);
 	Serial.println(buff);
 	}
 
 void printReading() {
 	printDatestamp();
 	printValues();
+	Serial.flush();
 	}
 
 inline void getPressureReading() {
@@ -187,7 +191,6 @@ void loop() {
 		wakeXBee();
 		printReading();
 	}
-	Serial.flush();
 	sleepXBee();
 	powerDown();
 }
